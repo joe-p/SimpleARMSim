@@ -181,6 +181,7 @@ class ARM:
     def cycle(self):
         self.instruction_fetch()
         self.instruction_decode()
+        print(self.instruction.name)
         self.pc = self.npc # placeholder for testing
 
 cpu = ARM()
