@@ -16,7 +16,7 @@ class Binary:
 
     # digits() retuns the specified bit range
     # Example (Binary(0x0F).digits(0,3)) will return 1111
-    def digits(self, start, end):
+    def digits(self, end, start):
         s=""
         end += 1
         size = end - start
@@ -28,16 +28,52 @@ class Binary:
 
 
 class RFormat():
-    def __init__(self, name, instruction_bits):
+    def __init__(self, name, inst):
         self.format = "R"
         self.name = name
 
-        self.opcode = instruction_bits.digits(31,21)
-        self.rm = instruction_bits.digits(20,16)
-        self.shamt = insutrction_bits.digits(15,10)
-        self.rn = instruction_bits.digits(9,5)
-        self.rd = instruction_buts.digits(4,0)
+        self.opcode = inst.digits(31,21)
+        self.rm = inst.digits(20,16)
+        self.shamt = inst.digits(15,10)
+        self.rn = inst.digits(9,5)
+        self.rd = inst.digits(4,0)
 
+class IFormat(self, name, inst):
+
+    def __init__(self, name, inst):
+        self.format = "I"
+        self.name = name
+
+        self.opcode = inst.digits(31,22)
+        self.immediate = inst.digits(21,10)
+        self.rn = inst.digits(9,5)
+        self.rt = inst.digits(4,0)
+
+
+class DFormat(self, name, inst):
+    self.format = "D"
+    self.name = name
+
+    self.opcode = inst.digits(31,21)
+    self.address = inst.digits(20,12)
+    self.op2 = inst.bits(11,10)
+    self.rn = inst.bits(9,5)
+    self.rt = inst.bits(4,0)
+
+class CBFormat(self, name, inst):
+    self.format = "CB"
+    self.name = name
+
+    self.opcode = inst.bits(31,24)
+    self.address = inst.bits(23,5)
+    self.rt = (4,0)
+
+class BFormat(self, name, inst):
+    self.format = "B"
+    self.name = name
+
+    self.opcode = inst.bits(31,26)
+    self.address = inst.bits(25,0)
 
 class MUX:
     def __init__(self):
