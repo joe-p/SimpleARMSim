@@ -8,7 +8,7 @@ class Binary:
         return self.bin
 
     def __int__(self):
-        return int(self.bin)
+        return int(self.bin, 2)
 
     def digit(self, n):
         # Reverses so 0 is LSB, instead of MSB
@@ -16,7 +16,7 @@ class Binary:
 
     # digits() retuns the specified bit range
     # Example (Binary(0x0F).digits(0,3)) will return 1111
-    def digits(self, start, end):
+    def digits(self, end, start):
         s=""
         end += 1
         size = end - start
@@ -26,18 +26,55 @@ class Binary:
 
         return Binary(int(s,2), size)
 
-
-class RFormat():
-    def __init__(self, name, instruction_bits):
+class RFormat:
+    def __init__(self, name, inst):
         self.format = "R"
         self.name = name
 
-        self.opcode = instruction_bits.digits(31,21)
-        self.rm = instruction_bits.digits(20,16)
-        self.shamt = insutrction_bits.digits(15,10)
-        self.rn = instruction_bits.digits(9,5)
-        self.rd = instruction_buts.digits(4,0)
+        self.opcode = inst.digits(31,21)
+        self.rm = inst.digits(20,16)
+        self.shamt = inst.digits(15,10)
+        self.rn = inst.digits(9,5)
+        self.rd = inst.digits(4,0)
 
+class IFormat:
+
+    def __init__(self, name, inst):
+        self.format = "I"
+        self.name = name
+
+        self.opcode = inst.digits(31,22)
+        self.immediate = inst.digits(21,10)
+        self.rn = inst.digits(9,5)
+        self.rt = inst.digits(4,0)
+
+class DFormat:
+    def __init__(self, name, inst):
+        self.format = "D"
+        self.name = name
+
+        self.opcode = inst.digits(31,21)
+        self.address = inst.digits(20,12)
+        self.op2 = inst.bits(11,10)
+        self.rn = inst.bits(9,5)
+        self.rt = inst.bits(4,0)
+
+class CBFormat:
+    def __init__(self, name, inst):
+        self.format = "CB"
+        self.name = name
+
+        self.opcode = inst.bits(31,24)
+        self.address = inst.bits(23,5)
+        self.rt = (4,0)
+
+class BFormat:
+    def __init__(self, name, inst):
+        self.format = "B"
+        self.name = name
+
+        self.opcode = inst.bits(31,26)
+        self.address = inst.bits(25,0)
 
 class MUX:
     def __init__(self, in0, in1):
@@ -76,11 +113,11 @@ class ARM:
     alu_out = ALU()
 
     instruction_memory = {
-            0: Binary(0, 32),
-            4: Binary(0xAFFFFFFF, 32)
+            0: Binary(0b10001011000010010000001010101001, 32), # ADD X9, X21, X9
+            4: Binary(0x91000529, 32)
             }
 
-    instruction = Binary(0, 32)
+    instruction = None
 
     register = [0] * 32
 
@@ -100,7 +137,7 @@ class ARM:
         
         self.pc_alu.in1 = self.pc
 
-        i = int(self.instruction_bits)
+        i = int(self.instruction_bits.digits(31,21))
         ib = self.instruction_bits
 
         if i == 1112:
@@ -133,19 +170,19 @@ class ARM:
         i = self.instruction
 
         if i.format == "R":
-            self.dataA = i.rn
-            self.dataB = i.rm
+            self.dataA = self.register[int(i.rn)]
+            self.dataB = self.register[int(i.rm)]
         elif i.format == "D":
-            self.imm = i.address
-            self.dataA = i.rt # goes to write data
-            self.dataB = i.rn # goes into ALU with imm
+            self.imm = int(i.address)
+            self.dataA = self.register[int(i.rt)] # goes to write data
+            self.dataB = self.register[int(i.rn)] # goes into ALU with imm
         elif i.format == "CB":
-            self.dataA = i.rn
-            self.dataB = i.address
+            self.dataA = self.register[int(i.rn)]
+            self.dataB = int(i.address)
         elif i.format == "B":
-            self.dataB = i.address
+            self.dataB = int(i.address)
         elif i.format == "I":
-            self.imm = i.immediate
+            self.imm = int(i.immediate)
 
         # ID pipeline reg here
 
@@ -216,9 +253,8 @@ class ARM:
     def cycle(self):
         self.instruction_fetch()
         self.instruction_decode()
-        self.execution()
-        self.memory_access()
-        self.write_back()
+        print(self.instruction.name)
+        self.pc = self.npc # placeholder for testing
 
 cpu = ARM()
 
