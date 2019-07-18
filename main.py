@@ -116,10 +116,10 @@ class ARM:
         elif 160 < i < 191:
             self.instruction = BFormat("B", ib)
         
+        self.npc = self.pc_alu.out() 
+        
         # IF pipeline here
 
-        self.npc = self.pc_alu.out() 
-  
     def instruction_decode(self):
         
         i = self.instruction
@@ -131,6 +131,13 @@ class ARM:
             self.imm = i.address
             self.dataA = i.rt # goes to write data
             self.dataB = i.rn # goes into ALU with imm
+        elif i.format = "CB":
+            self.dataA = i.rn
+            self.dataB = i.address
+        elif i.format = "B":
+            self.dataB = i.address
+        elif i.format = "I":
+            self.imm = i.immediate
 
         # ID pipeline reg here
 
