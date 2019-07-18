@@ -134,6 +134,36 @@ class ARM:
 
         # ID pipeline reg here
 
+    def execution(self):
+        if i.format == "R":
+            # mux0: s=1
+            # mux1: s=0
+
+
+        elif i.format == "D":
+            # mux0: s=1
+            # mux1: s=1
+
+        elif i.format == "CBZ":
+            # mux0: s=1
+            # mux1: s=1
+            # through ALU to compare
+
+        elif i.format == "B":
+            # mux0: s=0
+            # mux1: s=1
+            # skips ALU
+
+        pass
+    
+    def memory_access(self):
+        # Load/Store
+        pass
+
+    def write_back(self):
+        if 
+        pass
+
     def cycle(self):
         self.instruction_fetch()
         self.instruction_decode()
