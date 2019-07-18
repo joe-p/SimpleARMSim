@@ -40,9 +40,9 @@ class RFormat():
 
 
 class MUX:
-    def __init__(self):
-        self.in0 = 0
-        self.in1 = 0
+    def __init__(self, in0, in1):
+        self.in0 = in0
+        self.in1 = in1
         self.select = 0
 
     def out(self):
@@ -62,11 +62,18 @@ class ALU:
         if self.control == 0:
             return self.in1 + self.in2
 
+class DataMem:
+
+    def __init__(self, *args, **kwargs):
+        return super().__init__(*args, **kwargs)
+
 class ARM:
 
     pc = 0
 
     pc_alu = ALU() 
+
+    alu_out = ALU()
 
     instruction_memory = {
             0: Binary(0, 32),
@@ -85,6 +92,7 @@ class ARM:
         self.dataB = 0
         self.imm = 0
         self.npc = 4
+        self.lmd = 0
 
     def instruction_fetch(self):
          
@@ -124,56 +132,93 @@ class ARM:
         
         i = self.instruction
 
-        if i.format = "R":
+        if i.format == "R":
             self.dataA = i.rn
             self.dataB = i.rm
-        elif i.format = "D":
+        elif i.format == "D":
             self.imm = i.address
             self.dataA = i.rt # goes to write data
             self.dataB = i.rn # goes into ALU with imm
-        elif i.format = "CB":
+        elif i.format == "CB":
             self.dataA = i.rn
             self.dataB = i.address
-        elif i.format = "B":
+        elif i.format == "B":
             self.dataB = i.address
-        elif i.format = "I":
+        elif i.format == "I":
             self.imm = i.immediate
 
         # ID pipeline reg here
 
     def execution(self):
-        if i.format == "R":
-            # mux0: s=1
-            # mux1: s=0
 
+        i = self.instruction
+
+        mux0 = MUX(self.pc, self.dataA)
+        mux1 = MUX(self.dataB, self.imm)
+        
+        if i.format == "R":
+            pass
+            # mux0: s=1, out=data.A
+            # mux1: s=0, out=data.B
 
         elif i.format == "D":
-            # mux0: s=1
-            # mux1: s=1
+            pass
+            # mux0: s=1, out=data.A
+            # mux1: s=1, out=data.B
 
-        elif i.format == "CBZ":
-            # mux0: s=1
-            # mux1: s=1
-            # through ALU to compare
+        elif i.format == "CB":
+            pass
+            # mux0: s=1, out=data.A
+            # mux1: s=1, out=imm
 
         elif i.format == "B":
-            # mux0: s=0
-            # mux1: s=1
-            # skips ALU
-
-        pass
+            pass
+            # mux0: s=0, out=pc
+            # mux1: s=1, out=imm
     
     def memory_access(self):
-        # Load/Store
-        pass
+
+        i = self.instruction
+
+        mux = MUX(self.npc, self.alu_out)
+
+        if i.name == "LDUR":
+            pass
+
+        elif i.name == "STUR":
+            pass
+
+        elif i.name == "CBZ":
+            pass
+            #if 0, s=1
+            # if != 0, s=0
+
+        elif i.name == "B":
+            # s=1
+            pass
+
 
     def write_back(self):
-        if 
-        pass
+
+        i = instruction
+
+        mux = MUX(self.lmd, self.alu_out)
+
+        if i.format == "R":
+            pass
+            # mux: s=1
+
+        elif i.format == "D":
+            pass
+            # mux: s=0
+        
 
     def cycle(self):
         self.instruction_fetch()
         self.instruction_decode()
+        self.execution()
+        self.memory_access()
+        self.write_back()
 
 cpu = ARM()
 
