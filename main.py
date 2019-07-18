@@ -1,18 +1,5 @@
 #!/usr/bin/env python
 
-
-class MUX:
-    def __init__(self):
-        self.in0 = 0
-        self.in1 = 0
-        self.select = 0
-
-    def out(self):
-        if self.select == 1:
-            return in1
-        else:
-            return in0
-
 class Binary:
     def __init__(self, n, bits):
         self.bin = '{:0{}b}'.format(n, bits)
@@ -36,6 +23,30 @@ class Binary:
 
         return Binary(int(s,2), size)
 
+
+class RFormat():
+    def __init__(self, name, instruction_bits):
+        self.format = "R"
+        self.name = name
+        self.opcode = instruction_bits.digits(31,21)
+        self.rm = instruction_bits.digits(20,16)
+        self.shamt = insutrction_bits.digits(15,10)
+        self.rn = instruction_bits.digits(9,5)
+        self.rd = instruction_buts.digits(4,0)
+
+
+class MUX:
+    def __init__(self):
+        self.in0 = 0
+        self.in1 = 0
+        self.select = 0
+
+    def out(self):
+        if self.select == 1:
+            return in1
+        else:
+            return in0
+
 class ALU:
 
     def __init__(self):
@@ -49,22 +60,9 @@ class ALU:
 
 class ARM:
 
-    control = {
-            "Reg2Loc": 0,
-            "Branch": 0,
-            "MemRead": 0,
-            "MemtoReg": 0,
-            "ALUOp": 0,
-            "MemWrite": 0,
-            "ALUSrc": 0,
-            "RegWrite": 0
-            }
-
     pc = 0
 
     pc_alu = ALU() 
-
-    reg_mux = MUX()
 
     instruction_memory = {
             0: Binary(0, 32),
@@ -85,32 +83,41 @@ class ARM:
     registers = [0] * 32
 
     def __init__(self):
-        self.pc_alu.in2 = 4 # Input to the PC ALU is always 4
-
+        self.pc_alu.in2 = 4 # Input to the PC ALU is always 4 
+    
     def instruction_fetch(self):
-        self.instruction = self.instruction_memory[self.pc] # Get the instruction at PC
+        self.instruction_bits = self.instruction_memory[self.pc] # Get the instruction at PC
         
         self.pc_alu.in1 = self.pc
 
         self.pc = self.pc_alu.out() 
-
-
-    def update_register_file(self):
-        self.register_file["Read Register 1"] = self.instruction.digits(21,31)
-
-        self.reg_mux.in1 = self.instruction.digits(0,4)
-        self.reg_mux.in0 = self.instruction.digits(16,20)
-        self.reg_mux.select = self.control["Reg2Loc"]
-
-        self.register_file["Read Register 2"] = self.reg_mux.out
-        self.register_file["Write Register"] = self.instruction.digits(0,4)
-        # Need to do self.register_file["Write Data"]
-
   
     def instruction_decode(self):
-        self.update_register_file()
-        print(self.instruction.digits(0,31))
+        
+        #ADD, SUB, ADDI, SUBI, AND, ORR, LDUR, STUR, CBZ, and B.
+        i = int(self.instruction_bits.bin)
+        ib = self.instruction_bits
 
+        if i == 1112:
+            self.instruction = RFormat("ADD", ib)
+        elif i == 1624:
+            self.instruction = RFormat("SUB", ib)
+        elif i == 1160 or i == 1161:
+            self.instruction = IFormat("ADDI", ib)
+        elif i == 1672 or i == 1673:
+             self.instruction = IFormat("SUBI", ib)
+        elif i == 1104:
+            self.instruction = RFormat("AND", ib)
+        elif i == 1360:
+            self.instruction = RFormat("ORR", ib)
+        elif i == 1986:
+            self.instruction =  DFormat("LDUR", ib)
+        elif i == 1984:
+            self.instruction =  DFormat("STUR", ib)
+        elif 1440 < i < 1447:
+            self.instruction = CBFormat("CBZ", ib)
+        elif 160 < i < 191:
+            self.instruction = BFormat("B", ib)
         
     def cycle(self):
         self.instruction_fetch()
