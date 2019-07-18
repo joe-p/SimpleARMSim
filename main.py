@@ -71,16 +71,7 @@ class ARM:
 
     instruction = Binary(0, 32)
 
-    register_file = {
-            "Read Register 1": 0,
-            "Read Register 2": 0,
-            "Write Register": 0,
-            "Write Data": 0,
-            "Read Data 1": 0,
-            "Read Data 2": 0
-            }
-
-    registers = [0] * 32
+    register = [0] * 32
 
     def __init__(self):
         self.pc_alu.in2 = 4 # Input to the PC ALU is always 4 
@@ -122,7 +113,6 @@ class ARM:
     def cycle(self):
         self.instruction_fetch()
         self.instruction_decode()
-
 
 cpu = ARM()
 
