@@ -7,6 +7,9 @@ class Binary:
     def __str__(self):
         return self.bin
 
+    def __int__(self):
+        return int(self.bin)
+
     def digit(self, n):
         # Reverses so 0 is LSB, instead of MSB
         return self.bin[::-1][n]
@@ -28,6 +31,7 @@ class RFormat():
     def __init__(self, name, instruction_bits):
         self.format = "R"
         self.name = name
+
         self.opcode = instruction_bits.digits(31,21)
         self.rm = instruction_bits.digits(20,16)
         self.shamt = insutrction_bits.digits(15,10)
@@ -75,18 +79,20 @@ class ARM:
 
     def __init__(self):
         self.pc_alu.in2 = 4 # Input to the PC ALU is always 4 
-    
+        
+        # Initial values are zero
+        self.dataA = 0
+        self.dataB = 0
+        self.imm = 0
+        self.npc = 4
+
     def instruction_fetch(self):
+         
         self.instruction_bits = self.instruction_memory[self.pc] # Get the instruction at PC
         
         self.pc_alu.in1 = self.pc
 
-        self.pc = self.pc_alu.out() 
-  
-    def instruction_decode(self):
-        
-        #ADD, SUB, ADDI, SUBI, AND, ORR, LDUR, STUR, CBZ, and B.
-        i = int(self.instruction_bits.bin)
+        i = int(self.instruction_bits)
         ib = self.instruction_bits
 
         if i == 1112:
@@ -110,6 +116,24 @@ class ARM:
         elif 160 < i < 191:
             self.instruction = BFormat("B", ib)
         
+        # IF pipeline here
+
+        self.npc = self.pc_alu.out() 
+  
+    def instruction_decode(self):
+        
+        i = self.instruction
+
+        if i.format = "R":
+            self.dataA = i.rn
+            self.dataB = i.rm
+        elif i.format = "D":
+            self.imm = i.address
+            self.dataA = i.rt # goes to write data
+            self.dataB = i.rn # goes into ALU with imm
+
+        # ID pipeline reg here
+
     def cycle(self):
         self.instruction_fetch()
         self.instruction_decode()
