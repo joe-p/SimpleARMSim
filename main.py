@@ -161,19 +161,19 @@ class ARM:
         i = self.instruction
 
         if i.format = "R":
-            self.dataA = i.rn
-            self.dataB = i.rm
+            self.dataA = register[int(i.rn)]
+            self.dataB = register[int(i.rm)]
         elif i.format = "D":
-            self.imm = i.address
-            self.dataA = i.rt # goes to write data
-            self.dataB = i.rn # goes into ALU with imm
+            self.imm = int(i.address)
+            self.dataA = register[int(i.rt)] # goes to write data
+            self.dataB = register[int(i.rn)] # goes into ALU with imm
         elif i.format = "CB":
-            self.dataA = i.rn
-            self.dataB = i.address
+            self.dataA = register[int(i.rn])
+            self.dataB = int(i.address)
         elif i.format = "B":
-            self.dataB = i.address
+            self.dataB = int(i.address)
         elif i.format = "I":
-            self.imm = i.immediate
+            self.imm = int(i.immediate)
 
         # ID pipeline reg here
 
