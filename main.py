@@ -101,8 +101,9 @@ class ALU:
 
 class DataMem:
 
-    def __init__(self, *args, **kwargs):
-        return super().__init__(*args, **kwargs)
+    def __init__():
+        self.read = {}
+        self.write = {}
 
 class ARM:
 
@@ -110,7 +111,9 @@ class ARM:
 
     pc_alu = ALU() 
 
-    alu_out = ALU()
+    alu = ALU()
+
+    memory = DataMem()
 
     instruction_memory = {
             0: Binary(0b10001011000010010000001010101001, 32), # ADD X9, X21, X9
@@ -130,6 +133,8 @@ class ARM:
         self.imm = 0
         self.npc = 4
         self.lmd = 0
+        self.alu_out = 0
+        self.cond = 0
 
     def instruction_fetch(self):
          
@@ -188,30 +193,35 @@ class ARM:
 
     def execution(self):
 
+        #alu_out: self.in1 = 0, self.in2 = 0, self.control = 0, out()= if self.control == 0: return self.in1 + self.in2
+
         i = self.instruction
 
         mux0 = MUX(self.pc, self.dataA)
         mux1 = MUX(self.dataB, self.imm)
         
         if i.format == "R":
-            pass
-            # mux0: s=1, out=data.A
-            # mux1: s=0, out=data.B
-
+            mux0.select = 1
+            mux1.select = 0
+        elif i.format == "I":
+            mux0.select = 1
+            mux1.select = 1
         elif i.format == "D":
-            pass
-            # mux0: s=1, out=data.A
-            # mux1: s=1, out=data.B
-
+            mux0.select = 1
+            mux1.select = 1
         elif i.format == "CB":
-            pass
-            # mux0: s=1, out=data.A
-            # mux1: s=1, out=imm
-
+            mux0.select = 1
+            mux1.select = 1
+            if self.dataA == 0:
+                self.cond = self.dataA
         elif i.format == "B":
-            pass
-            # mux0: s=0, out=pc
-            # mux1: s=1, out=imm
+            mux0.select = 0
+            mux1.select = 1
+
+        self.alu.in1 = mux0.out()
+        self.alu.in2 = mux1.out()
+        self.alu_out = self.alu.out()
+            
     
     def memory_access(self):
 
@@ -220,19 +230,19 @@ class ARM:
         mux = MUX(self.npc, self.alu_out)
 
         if i.name == "LDUR":
-            pass
-
+            self.lmd = self.memory[self.alu_out]
         elif i.name == "STUR":
-            pass
-
+            self.memory[self.alu_out] = self.dataB
         elif i.name == "CBZ":
-            pass
-            #if 0, s=1
-            # if != 0, s=0
-
+            if self.cond == 0:
+                mux.select = 1
+            else:
+                mux.select = 0
+            self.pc = mux.out()
         elif i.name == "B":
-            # s=1
-            pass
+            mux.select = 1
+            self.pc = mux.out()
+            
 
 
     def write_back(self):
@@ -242,17 +252,22 @@ class ARM:
         mux = MUX(self.lmd, self.alu_out)
 
         if i.format == "R":
-            pass
-            # mux: s=1
-
-        elif i.format == "D":
-            pass
-            # mux: s=0
+            mux.select = 1
+            self.register[int(i.rd)] = mux.out()
+        elif i.format == "I":
+            mux.select = 1
+            self.register[int(i.rd)] = mux.out()
+        elif i.name == "LDUR":
+            mux.select = 0
+            self.register[int(i.rt)] = mux.out()
         
 
     def cycle(self):
         self.instruction_fetch()
         self.instruction_decode()
+        self.execution()
+        self.memory_access()
+        self.write_back()
         print(self.instruction.name)
         self.pc = self.npc # placeholder for testing
 
