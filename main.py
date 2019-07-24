@@ -99,12 +99,6 @@ class ALU:
         if self.control == 0:
             return self.in1 + self.in2
 
-class DataMem:
-
-    def __init__():
-        self.read = {}
-        self.write = {}
-
 class ARM:
 
     pc = 0
@@ -113,7 +107,7 @@ class ARM:
 
     alu = ALU()
 
-    memory = DataMem()
+    data_memory= {}
 
     instruction_memory = {
             0: Binary(0b10001011000010010000001010101001, 32), # ADD X9, X21, X9
@@ -230,9 +224,9 @@ class ARM:
         mux = MUX(self.npc, self.alu_out)
 
         if i.name == "LDUR":
-            self.lmd = self.memory[self.alu_out]
+            self.lmd = self.data_memory[self.alu_out]
         elif i.name == "STUR":
-            self.memory[self.alu_out] = self.dataB
+            self.data_memory[self.alu_out] = self.dataB
         elif i.name == "CBZ":
             if self.cond == 0:
                 mux.select = 1
@@ -247,7 +241,7 @@ class ARM:
 
     def write_back(self):
 
-        i = instruction
+        i = self.instruction
 
         mux = MUX(self.lmd, self.alu_out)
 
