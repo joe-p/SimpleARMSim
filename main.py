@@ -55,17 +55,17 @@ class DFormat:
 
         self.opcode = inst.digits(31,21)
         self.address = inst.digits(20,12)
-        self.op2 = inst.bits(11,10)
-        self.rn = inst.bits(9,5)
-        self.rt = inst.bits(4,0)
+        self.op2 = inst.digits(11,10)
+        self.rn = inst.digits(9,5)
+        self.rt = inst.digits(4,0)
 
 class CBFormat:
     def __init__(self, name, inst):
         self.format = "CB"
         self.name = name
 
-        self.opcode = inst.bits(31,24)
-        self.address = inst.bits(23,5)
+        self.opcode = inst.digits(31,24)
+        self.address = inst.digits(23,5)
         self.rt = (4,0)
 
 class BFormat:
@@ -73,8 +73,8 @@ class BFormat:
         self.format = "B"
         self.name = name
 
-        self.opcode = inst.bits(31,26)
-        self.address = inst.bits(25,0)
+        self.opcode = inst.digits(31,26)
+        self.address = inst.digits(25,0)
 
 class MUX:
     def __init__(self, in0, in1):
@@ -84,9 +84,9 @@ class MUX:
 
     def out(self):
         if self.select == 1:
-            return in1
+            return self.in1
         else:
-            return in0
+            return self.in0
 
 class ALU:
 
@@ -107,11 +107,14 @@ class ARM:
 
     alu = ALU()
 
-    data_memory= {}
+    data_memory= [0] * 300
 
     instruction_memory = {
-            0: Binary(0b10001011000010010000001010101001, 32), # ADD X9, X21, X9
-            4: Binary(0x91000529, 32)
+            0: Binary(0b10010001000000000001010100101001, 32), # ADDI X9, X9, 5
+            4: Binary(0b10010001000000000001110101001010, 32), # ADDI X10, X10, 7
+            8: Binary(0b11111000010000000000000101001011, 32), # LDUR X11, [x10, 0]
+            12: Binary(0b10001011000010010000000101101100, 32), # ADD X12, X9, X11
+            16: Binary(0b11111000000000000000000110101100, 32) # STUR x12, [x13, 0]
             }
 
     instruction = None
@@ -173,8 +176,8 @@ class ARM:
             self.dataB = self.register[int(i.rm)]
         elif i.format == "D":
             self.imm = int(i.address)
-            self.dataA = self.register[int(i.rt)] # goes to write data
-            self.dataB = self.register[int(i.rn)] # goes into ALU with imm
+            self.dataA = int(i.rn) # goes to write data
+            self.dataB = int(i.rt) # goes into ALU with imm
         elif i.format == "CB":
             self.dataA = self.register[int(i.rn)]
             self.dataB = int(i.address)
@@ -191,7 +194,7 @@ class ARM:
 
         i = self.instruction
 
-        mux0 = MUX(self.pc, self.dataA)
+        mux0 = MUX(self.npc, self.dataA)
         mux1 = MUX(self.dataB, self.imm)
         
         if i.format == "R":
@@ -208,6 +211,7 @@ class ARM:
             mux1.select = 1
             if self.dataA == 0:
                 self.cond = self.dataA
+                
         elif i.format == "B":
             mux0.select = 0
             mux1.select = 1
@@ -224,9 +228,9 @@ class ARM:
         mux = MUX(self.npc, self.alu_out)
 
         if i.name == "LDUR":
-            self.lmd = self.data_memory[self.alu_out]
+            self.lmd = self.data_memory[self.alu_out*8]
         elif i.name == "STUR":
-            self.data_memory[self.alu_out] = self.dataB
+            self.data_memory[self.alu_out*8] = self.dataB
         elif i.name == "CBZ":
             if self.cond == 0:
                 mux.select = 1
@@ -250,10 +254,16 @@ class ARM:
             self.register[int(i.rd)] = mux.out()
         elif i.format == "I":
             mux.select = 1
-            self.register[int(i.rd)] = mux.out()
+            self.register[int(i.rt)] = mux.out()
         elif i.name == "LDUR":
             mux.select = 0
             self.register[int(i.rt)] = mux.out()
+        elif i.name == "STUR":
+            self.register[self.alu_out] = self.data_memory[self.alu_out*8]
+
+        for i in range(0,31):
+                addr = i * 8
+                self.data_memory[addr] = self.register[i]
         
 
     def cycle(self):
@@ -263,9 +273,11 @@ class ARM:
         self.memory_access()
         self.write_back()
         print(self.instruction.name)
+        print(self.register)
         self.pc = self.npc # placeholder for testing
 
 cpu = ARM()
 
-cpu.cycle()
-cpu.cycle()
+for i in range(len(cpu.instruction_memory)):
+    cpu.cycle()
+
