@@ -110,11 +110,11 @@ class ARM:
     data_memory= [0] * 300
 
     instruction_memory = {
-            0: Binary(0b10010001000000000001010100101001, 32), # ADDI X9, X9, 5
-            4: Binary(0b10010001000000000001110101001010, 32), # ADDI X10, X10, 7
-            8: Binary(0b11111000010000000000000101001011, 32), # LDUR X11, [x10, 0]
-            12: Binary(0b10001011000010010000000101101100, 32), # ADD X12, X9, X11
-            16: Binary(0b11111000000000000000000110101100, 32) # STUR x12, [x13, 0]
+            #0: Binary(0b10010001000000000001010100101001, 32), # ADDI X9, X9, 5
+            #4: Binary(0b10010001000000000001110101001010, 32), # ADDI X10, X10, 7
+            #8: Binary(0b11111000010000000000000101001011, 32), # LDUR X11, [x10, 0]
+            #12: Binary(0b10001011000010010000000101101100, 32), # ADD X12, X9, X11
+            #16: Binary(0b11111000000000000000000110101100, 32) # STUR x12, [x13, 0]
             }
 
     instruction = None
@@ -267,16 +267,22 @@ class ARM:
         
 
     def cycle(self):
+        print(self.instruction_memory)
+        print(self.register)
+        print(self.data_memory)
         self.instruction_fetch()
         self.instruction_decode()
         self.execution()
         self.memory_access()
         self.write_back()
-        print(self.instruction.name)
         print(self.register)
+        print(self.data_memory)
         self.pc = self.npc # placeholder for testing
 
 cpu = ARM()
+
+#import file
+#read to instruction memory
 
 for i in range(len(cpu.instruction_memory)):
     cpu.cycle()
