@@ -107,7 +107,7 @@ class ARM:
 
     alu = ALU()
 
-    data_memory= { } 
+    data_memory= [0] * 256 
 
     instruction_memory = {}
 
@@ -208,12 +208,12 @@ class ARM:
             mux1.select = 1
         self.alu.in1 = mux0.out()
         self.alu.in2 = mux1.out()
-        if i.format == "CB" or i.format == "B":
+        if i.format == "D":
+            self.alu.in1 *= 8
+        elif i.format == "CB" or i.format == "B":
             self.alu.in1 -= 4
             self.alu.in2 <<= 2
-            self.alu_out = self.alu.out()
-        else:
-            self.alu_out = self.alu.out()
+        self.alu_out = self.alu.out()
             
     
     def memory_access(self):
@@ -223,8 +223,9 @@ class ARM:
         mux = MUX(self.npc, self.alu_out)
 
         if i.name == "LDUR":
-            self.lmd = self.data_memory[self.alu_out*8]
-            self.data_memory[self.alu_out*8] = self.dataB
+            self.lmd = self.data_memory[self.alu_out]
+        elif i.name == "STUR":
+            self.data_memory[self.alu_out] = self.register[int(i.rt)]
         elif i.name == "CBZ":
             if self.cond == 0:
                 mux.select = 1
@@ -252,12 +253,6 @@ class ARM:
         elif i.name == "LDUR":
             mux.select = 0
             self.register[int(i.rt)] = mux.out()
-        elif i.name == "STUR":
-            self.register[self.alu_out] = self.data_memory[self.alu_out*8]
-
-        for i in range(0,31):
-                addr = i * 8
-                self.data_memory[addr] = self.register[i]
         
 
     def cycle(self):
@@ -276,6 +271,7 @@ class ARM:
         self.register = [0] * 32
         for _ in range(len(self.instruction_memory)):
             self.cycle()
+            print(self.data_memory)
         print("***********")
 
 
@@ -355,6 +351,8 @@ class ARM:
 
     def load_instructions(self, inst_list):
         location = 0
+
+        self.instruction_memory = {}
         
         for inst in inst_list.split("\n"):
             self.instruction_memory[location] = self.assemble(inst)
@@ -385,11 +383,12 @@ STUR X11, [X21, #2]"""
 
 cpu.load_instructions(ex_2)
 
-cpu.data_memory[0] = 10
-cpu.data_memory[8] = 13
+cpu.data_memory[168] = 10
+cpu.data_memory[169] = 13
 
 print(cpu.data_memory)
 cpu.run_all()
+print(cpu.data_memory)
 #
 #ex_3 = """ADDI X21, XZR, #0	//X21 = 0 (i = 0 for loop)
 #ADDI X22, XZR, #100	//X22 = 100
