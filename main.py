@@ -293,13 +293,13 @@ class ARM:
     def run_all(self):
         self.pc = 0
         self.register = [0] * 32
-        print(self.instruction_memory)
-        print(self.register)
-        print(self.data_memory)
+        print("Instruction Memory: " + self.instruction_memory)
+        print("Registers (Before): " + self.register)
+        print("Data Memory (Before):" + self.data_memory)
         for _ in range(len(self.instruction_memory)):
             self.cycle()
-        print(self.register)
-        print(self.data_memory)
+        print("Registers (Before): " + self.register)
+        print("Data Memory (After):" + self.data_memory)
         print("***********")
 
 
