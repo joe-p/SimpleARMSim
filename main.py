@@ -216,6 +216,7 @@ class ARM:
             self.dataB = int(i.address.undone_twos())
         elif i.format == "I":
             self.imm = int(i.immediate)
+            self.dataA = self.register[int(i.rn)]
 
         # ID pipeline reg here
 
@@ -238,8 +239,7 @@ class ARM:
         elif i.format == "CB":
             mux0.select = 0
             mux1.select = 1
-            if self.dataA == 0:
-                self.cond = self.dataA
+            self.cond = self.dataA
         elif i.format == "B":
             mux0.select = 0
             mux1.select = 1
@@ -250,7 +250,11 @@ class ARM:
         elif i.format == "B":
             self.alu.in1 = self.pc
             self.alu.in2 = self.dataB * 4
+        elif i.format == "CB":
+            self.alu.in2 *= 4
         self.alu_out = self.alu.out()
+        if i.name == "SUB" or i.name == "SUBI":
+            self.alu_out = self.alu.in1 - self.alu.in2
             
     
     def memory_access(self):
