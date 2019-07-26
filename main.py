@@ -1,15 +1,18 @@
 #!/usr/bin/env python
 
+# Binary is a class used to to easily manipulate binary numbers
 class Binary:
     def __init__(self, n, bits):
 
+        # We need to convert the negative number using two's complement
         if n < 0:
             self.neg = n
             n = n*-1
 
-            l_bin = list('{:0{}b}'.format(n, bits))
+            l_bin = list('{:0{}b}'.format(n, bits)) # Convert to binary
             
             for i in range(len(l_bin)):
+                # Flip each bit
                 if int(l_bin[i]):
                     l_bin[i] = "0"
                 else:
@@ -21,8 +24,9 @@ class Binary:
             self.bin = twos_comp.bin
 
         else:
-            self.bin = '{:0{}b}'.format(n, bits)
+            self.bin = '{:0{}b}'.format(n, bits) # Convert to binary
     
+    # undone_twos() will undo a number that is in twos complement to get the original negative integer
     def undone_twos(self):
 
         l_bin = list(self.bin)
@@ -59,6 +63,8 @@ class Binary:
 
         return Binary(int(s,2), size)
 
+
+# Each of the xFormat classes contain information about a register (format, name, and values)
 class RFormat:
     def __init__(self, name, inst):
         self.format = "R"
@@ -109,6 +115,7 @@ class BFormat:
         self.opcode = inst.digits(31,26)
         self.address = inst.digits(25,0)
 
+# The mux class is used to simulate a MUX
 class MUX:
     def __init__(self, in0, in1):
         self.in0 = in0
@@ -120,7 +127,7 @@ class MUX:
             return self.in1
         else:
             return self.in0
-
+# The Alu class is used to simulate an ALU
 class ALU:
 
     def __init__(self):
@@ -133,6 +140,7 @@ class ALU:
 
             return self.in1 + self.in2
 
+# Our entire CPU is simulated within the ARM class
 class ARM:
 
     pc = 0
@@ -169,6 +177,7 @@ class ARM:
         i = int(self.instruction_bits.digits(31,21))
         ib = self.instruction_bits
 
+        # Check the first 11 bits (opcode) of the instruction to determine which instruction we are going to execute
         if i == 1112:
             self.instruction = RFormat("ADD", ib)
         elif i == 1624:
@@ -200,6 +209,7 @@ class ARM:
         
         i = self.instruction
 
+        # Set up the dataA and dataB (the read data output of the register file) based on the values within the instruction object
         if i.format == "R":
             self.dataA = self.register[int(i.rn)]
             self.dataB = self.register[int(i.rm)]
@@ -317,6 +327,9 @@ class ARM:
         self.memory_access()
         self.write_back()
 
+
+    # run_all() will go through each instruction in the instruction memory and execute it until the PC
+    # is over the last instruction
     def run_all(self):
         self.pc = 0
         self.register = [0] * 32
@@ -332,6 +345,8 @@ class ARM:
         print("***********")
 
 
+    # strip_code() is used when reading the assembly code to get integer values
+    # For example, X9 => 9, XZR =>, #1 => 1, etc.
     def strip_code(self, code):
         split_c = code.split("//")[0].split(" ")
 
@@ -343,6 +358,7 @@ class ARM:
         split_c[:] = (value for value in split_c if value != '')
         return split_c
 
+    # assemble() reads a single line of code and converts it into machine language
     def assemble(self, code):
         bin_str = ""
         
