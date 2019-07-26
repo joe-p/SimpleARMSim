@@ -2,8 +2,18 @@
 
 class Binary:
     def __init__(self, n, bits):
-        self.bin = '{:0{}b}'.format(n, bits)
+        l_bin = list('{:0{}b}'.format(n, bits))
+        
+        if n < 0:
+            l_bin.remove("-")
+            for i in range(len(l_bin)):
+                if int(l_bin[i]):
+                    l_bin[i] = "0"
+                else:
+                    l_bin[i] = "1"
 
+        self.bin = "".join(l_bin)
+    
     def __str__(self):
         return self.bin
 
@@ -136,6 +146,8 @@ class ARM:
         i = int(self.instruction_bits.digits(31,21))
         ib = self.instruction_bits
 
+        print(i)
+        print(ib)
         if i == 1112:
             self.instruction = RFormat("ADD", ib)
         elif i == 1624:
@@ -259,16 +271,13 @@ class ARM:
         
 
     def cycle(self):
-        print(self.instruction_memory)
-        print(self.register)
-        print(self.data_memory)
         self.instruction_fetch()
         self.instruction_decode()
         self.execution()
         self.memory_access()
         self.write_back()
-        print(self.register)
-        print(self.data_memory)
+        print(self.instruction.name)
+        print("==")
         self.pc = self.npc # placeholder for testing
 
     def run_all(self):
@@ -341,9 +350,8 @@ class ARM:
             op = "10110100"
             rt = Binary(int(c[1]), 5)
             address = Binary(int(c[2]), 19)
-
+            print(address)
             bin_str = op + str(address) + str(rt)
-
         elif name == "B":
             op = "000101"
             
@@ -372,7 +380,7 @@ ADD  X9,  X23, X24
 SUB  X10, X22, X21
 ADD  X11, X9,  X10"""
 
-cpu.load_instructions(ex_1)
+#cpu.load_instructions(ex_1)
 
 cpu.run_all()
 
@@ -383,23 +391,23 @@ LDUR X10, [X21, #1]	//X10 = 13
 ADD  X11, X9,  X10
 STUR X11, [X21, #2]"""
 
-cpu.load_instructions(ex_2)
+#cpu.load_instructions(ex_2)
 
-cpu.data_memory[0] = 10
-cpu.data_memory[8] = 13
+cpu.data_memory[168] = 10
+cpu.data_memory[169] = 13
 
-print(cpu.data_memory)
 cpu.run_all()
-#
-#ex_3 = """ADDI X21, XZR, #0	//X21 = 0 (i = 0 for loop)
-#ADDI X22, XZR, #100	//X22 = 100
-#ADDI X23, XZR, #10	//X23 = 10
-#SUBI X9,  X21, #4	//compare i with 4
-#CBZ  X9, 4		//if i is 4 exit for loop
-#SUB  X22, X22, X23	
-#ADDI X21, X21, #1	//i++
-#B    -4			//loop back up to compare again"""
-#
-#cpu.load_instructions(ex_3)
-#
-#cpu.run_all()
+
+
+ex_3 = """ADDI X21, XZR, #0	//X21 = 0 (i = 0 for loop)
+ADDI X22, XZR, #100	//X22 = 100
+ADDI X23, XZR, #10	//X23 = 10
+SUBI X9,  X21, #4	//compare i with 4
+CBZ  X9, 4		//if i is 4 exit for loop
+SUB  X22, X22, X23	
+ADDI X21, X21, #1	//i++
+B    -4			//loop back up to compare again"""
+
+cpu.load_instructions(ex_3)
+
+cpu.run_all()
