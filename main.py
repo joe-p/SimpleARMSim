@@ -146,8 +146,6 @@ class ARM:
         i = int(self.instruction_bits.digits(31,21))
         ib = self.instruction_bits
 
-        print(i)
-        print(ib)
         if i == 1112:
             self.instruction = RFormat("ADD", ib)
         elif i == 1624:
@@ -202,27 +200,35 @@ class ARM:
         mux1 = MUX(self.dataB, self.imm)
         
         if i.format == "R":
+            # select Data A and Data B
             mux0.select = 1
             mux1.select = 0
         elif i.format == "I":
+            # select Data A and Immediate
             mux0.select = 1
             mux1.select = 1
         elif i.format == "D":
+            # select Data A and Immediate
             mux0.select = 1
             mux1.select = 1
         elif i.format == "CB":
+            # select NPC and Immediate
             mux0.select = 0
             mux1.select = 1
             if self.dataA == 0:
                 self.cond = self.dataA
         elif i.format == "B":
+            # select NPC and Immediate
             mux0.select = 0
             mux1.select = 1
+        # set ALU
         self.alu.in1 = mux0.out()
         self.alu.in2 = mux1.out()
         if i.format == "D":
+            # format for data memory
             self.alu.in1 *= 8
         elif i.format == "CB" or i.format == "B":
+            # instruction memory is in multiples of 4
             self.alu.in1 -= 4
             self.alu.in2 <<= 2
         self.alu_out = self.alu.out()
@@ -235,16 +241,21 @@ class ARM:
         mux = MUX(self.npc, self.alu_out)
 
         if i.name == "LDUR":
+            # store read data from data memory in lmd
             self.lmd = self.data_memory[self.alu_out]
         elif i.name == "STUR":
+            # write data into data memory
             self.data_memory[self.alu_out] = self.register[int(i.rt)]
         elif i.name == "CBZ":
             if self.cond == 0:
+                # if 0, branch
                 mux.select = 1
             else:
+                # if not 0, go to next instruction
                 mux.select = 0
             self.pc = mux.out()
         elif i.name == "B":
+            # will always branch
             mux.select = 1
             self.pc = mux.out()
             
@@ -257,12 +268,15 @@ class ARM:
         mux = MUX(self.lmd, self.alu_out)
 
         if i.format == "R":
+            # write ALU output into the destination register
             mux.select = 1
             self.register[int(i.rd)] = mux.out()
         elif i.format == "I":
+            # write ALU output into the destination register
             mux.select = 1
             self.register[int(i.rt)] = mux.out()
         elif i.name == "LDUR":
+            # write lmd into the destination register
             mux.select = 0
             self.register[int(i.rt)] = mux.out()
         
@@ -279,9 +293,13 @@ class ARM:
     def run_all(self):
         self.pc = 0
         self.register = [0] * 32
+        print(self.instruction_memory)
+        print(self.register)
+        print(self.data_memory)
         for _ in range(len(self.instruction_memory)):
             self.cycle()
-            print(self.data_memory)
+        print(self.register)
+        print(self.data_memory)
         print("***********")
 
 
@@ -347,7 +365,6 @@ class ARM:
             op = "10110100"
             rt = Binary(int(c[1]), 5)
             address = Binary(int(c[2]), 19)
-            print(address)
             bin_str = op + str(address) + str(rt)
         elif name == "B":
             op = "000101"
@@ -381,7 +398,7 @@ ADD  X11, X9,  X10"""
 
 #cpu.load_instructions(ex_1)
 
-cpu.run_all()
+#cpu.run_all()
 
 
 ex_2 = """ADD  X21, XZR, XZR	//X21 = 0 or the beginning of data memory
@@ -392,26 +409,10 @@ STUR X11, [X21, #2]"""
 
 #cpu.load_instructions(ex_2)
 
-cpu.data_memory[168] = 10
-cpu.data_memory[169] = 13
+#cpu.data_memory[168] = 10
+#cpu.data_memory[169] = 13
 
-cpu.run_all()
-
-
-ex_3 = """ADDI X21, XZR, #0	//X21 = 0 (i = 0 for loop)
-ADDI X22, XZR, #100	//X22 = 100
-ADDI X23, XZR, #10	//X23 = 10
-SUBI X9,  X21, #4	//compare i with 4
-CBZ  X9, 4		//if i is 4 exit for loop
-SUB  X22, X22, X23	
-ADDI X21, X21, #1	//i++
-B    -4			//loop back up to compare again"""
-
-cpu.load_instructions(ex_3)
-cpu.data_memory[168] = 10
-cpu.data_memory[169] = 13
-
-cpu.run_all()
+#cpu.run_all()
 
 ex_3 = """ADDI X21, XZR, #0	//X21 = 0 (i = 0 for loop)
 ADDI X22, XZR, #100	//X22 = 100
