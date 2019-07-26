@@ -162,7 +162,6 @@ class ARM:
         self.cond = 0
 
     def instruction_fetch(self):
-        print("pc", self.pc) 
         self.instruction_bits = self.instruction_memory[self.pc] # Get the instruction at PC
         
         self.pc_alu.in1 = self.pc
@@ -242,8 +241,7 @@ class ARM:
             # select NPC and Immediate
             mux0.select = 0
             mux1.select = 1
-            if self.dataA == 0:
-                self.cond = self.dataA
+            self.cond = self.dataA
         elif i.format == "B":
             # select NPC and Immediate
             mux0.select = 0
@@ -257,11 +255,12 @@ class ARM:
         elif i.format == "B":
             self.alu.in1 = self.pc
             self.alu.in2 = self.dataB * 4
+        elif i.format == "CB":
+            self.alu.in2 *= 4
         self.alu_out = self.alu.out()
         if i.name == "SUB" or i.name == "SUBI":
             self.alu_out = self.alu.in1 - self.alu.in2
             
-            print("SUB ALU", self.alu.in1, self.alu.in2, self.alu_out)
     
     def memory_access(self):
 
@@ -278,12 +277,11 @@ class ARM:
             self.data_memory[self.alu_out] = self.register[int(i.rt)]
         elif i.name == "CBZ":
             if self.cond == 0:
-                print("CBZ MUX", mux.out())
                 # if 0, branch
-                mux.select = 0
+                mux.select = 1
             else:
                 # if not 0, go to next instruction
-                mux.select = 1
+                mux.select = 0
             self.pc = mux.out()
         elif i.name == "B":
             mux.select = 1
@@ -295,6 +293,7 @@ class ARM:
     def write_back(self):
 
         i = self.instruction
+
         mux = MUX(self.lmd, self.alu_out)
 
         if i.format == "R":
@@ -314,13 +313,9 @@ class ARM:
     def cycle(self):
         self.instruction_fetch()
         self.instruction_decode()
-        print(self.instruction.name)
         self.execution()
         self.memory_access()
         self.write_back()
-        #self.pc = self.npc # placeholder for testing
-        print(self.register)
-        print("---")
 
     def run_all(self):
         self.pc = 0
@@ -328,18 +323,12 @@ class ARM:
         print("Instruction Memory: ")
         for i in self.instruction_memory:
             print(i, self.instruction_memory[i])
-        print("Registers (Before): ")
-        print(self.register)
-        print("Data Memory (Before):")
-        print(self.data_memory)
-        count = 0
-        while self.pc < len(self.instruction_memory)*4 and count < 51:
+        print("Registers (Before): ", self.register)
+        print("Data Memory (Before):", self.data_memory)
+        while self.pc < len(self.instruction_memory)*4:
             self.cycle()
-            count +=1
-        print("Registers (Before): ")
-        print(self.register)
-        print("Data Memory (After):")
-        print(self.data_memory)
+        print("Registers (After): ", self.register)
+        print("Data Memory (After):", self.data_memory)
         print("***********")
 
 
@@ -436,7 +425,7 @@ SUB  X10, X22, X21
 ADD  X11, X9,  X10"""
 
 cpu.load_instructions(ex_1)
-
+print("Example 1")
 cpu.run_all()
 
 
@@ -448,6 +437,10 @@ STUR X11, [X21, #2]"""
 
 cpu.load_instructions(ex_2)
 
+cpu.data_memory[168] = 10
+cpu.data_memory[169] = 13
+
+print("Example 2")
 cpu.run_all()
 
 ex_3 = """ADDI X21, XZR, #0	//X21 = 0 (i = 0 for loop)
@@ -460,7 +453,6 @@ ADDI X21, X21, #1	//i++
 B    -4			//loop back up to compare again"""
 
 cpu.load_instructions(ex_3)
-cpu.data_memory[168] = 10
-cpu.data_memory[169] = 13
 
+print("Example 3")
 cpu.run_all()
