@@ -76,7 +76,7 @@ class CBFormat:
 
         self.opcode = inst.digits(31,24)
         self.address = inst.digits(23,5)
-        self.rt = (4,0)
+        self.rt = inst.digits(4,0)
 
 class BFormat:
     def __init__(self, name, inst):
@@ -162,10 +162,12 @@ class ARM:
             self.instruction =  DFormat("LDUR", ib)
         elif i == 1984:
             self.instruction =  DFormat("STUR", ib)
-        elif 1440 < i < 1447:
+        elif 1440 <= i <= 1447:
             self.instruction = CBFormat("CBZ", ib)
-        elif 160 < i < 191:
+        elif 160 <= i <= 191:
             self.instruction = BFormat("B", ib)
+        else:
+            raise ValueError("Unrecognized opcode: {} 0b{}".format(i, ib))
         
         self.npc = self.pc_alu.out() 
         
@@ -289,6 +291,8 @@ class ARM:
         self.memory_access()
         self.write_back()
         self.pc = self.npc # placeholder for testing
+        print(self.register)
+        print("---")
 
     def run_all(self):
         self.pc = 0
@@ -369,8 +373,8 @@ class ARM:
         elif name == "B":
             op = "000101"
             
-            address = Binary(int(c[1]), 26)
-
+            address = Binary(int(c[1]), 27)
+            print(len(str(address)))
             bin_str = op + str(address)
 
         return Binary(int(bin_str,2), 32)
