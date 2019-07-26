@@ -107,15 +107,9 @@ class ARM:
 
     alu = ALU()
 
-    data_memory= [0] * 300
+    data_memory= { } 
 
-    instruction_memory = {
-            #0: Binary(0b10010001000000000001010100101001, 32), # ADDI X9, X9, 5
-            #4: Binary(0b10010001000000000001110101001010, 32), # ADDI X10, X10, 7
-            #8: Binary(0b11111000010000000000000101001011, 32), # LDUR X11, [x10, 0]
-            #12: Binary(0b10001011000010010000000101101100, 32), # ADD X12, X9, X11
-            #16: Binary(0b11111000000000000000000110101100, 32) # STUR x12, [x13, 0]
-            }
+    instruction_memory = {}
 
     instruction = None
 
@@ -218,8 +212,7 @@ class ARM:
 
         self.alu.in1 = mux0.out()
         self.alu.in2 = mux1.out()
-        self.alu_out = self.alu.out()
-            
+        self.alu_out = self.alu.out() 
     
     def memory_access(self):
 
@@ -229,7 +222,6 @@ class ARM:
 
         if i.name == "LDUR":
             self.lmd = self.data_memory[self.alu_out*8]
-        elif i.name == "STUR":
             self.data_memory[self.alu_out*8] = self.dataB
         elif i.name == "CBZ":
             if self.cond == 0:
@@ -279,11 +271,135 @@ class ARM:
         print(self.data_memory)
         self.pc = self.npc # placeholder for testing
 
+    def run_all(self):
+        self.pc = 0
+        self.register = [0] * 32
+        for _ in range(len(self.instruction_memory)):
+            self.cycle()
+        print("***********")
+
+
+    def strip_code(self, code):
+        split_c = code.split("//")[0].split(" ")
+
+        for i in range(len(split_c)):
+            c = split_c[i]
+            c = c.replace(",","").replace("X" ,"").replace("#", "").replace("ZR", "0").replace("[","").replace("]","").strip()
+            split_c[i] = c
+
+        split_c[:] = (value for value in split_c if value != '')
+        return split_c
+
+    def assemble(self, code):
+        bin_str = ""
+        
+        c = self.strip_code(code)
+        name = c[0]
+        if name == "ADDI" or name == "SUBI":
+            
+            rd = Binary(int(c[1]), 5)
+            rn = Binary(int(c[2]), 5)
+            imm = Binary(int(c[3]), 12)
+
+            if name == "ADDI":
+                op = Binary(580, 10)
+            else:
+                op = Binary(836, 10)
+        
+            for part in [op, imm, rn, rd]:
+                bin_str += str(part)
+
+        elif name == "ADD" or name == "SUB":
+            rd = Binary(int(c[1]), 5)
+            rn = Binary(int(c[2]), 5)
+            shamt = Binary(0, 6)
+            rm = Binary(int(c[3]), 5)
+
+            if name == "ADD":
+                op = Binary(1112, 11)
+            else:
+                op = Binary(1624, 11)
+            
+            for part in [op, rm, shamt, rn, rd]:
+                bin_str += str(part)
+
+        elif name == "LDUR" or name == "STUR":
+            rt = Binary(int(c[1]), 5)
+            rn = Binary(int(c[2]), 5)
+            op2 = "00"
+            address = Binary(int(c[3]), 9)
+
+            if name == "LDUR":
+                op = Binary(1986, 11)
+            else:
+                op = Binary(1984, 11)
+        
+            for part in [op, address, op2, rn, rt]:
+                bin_str += str(part)
+
+        elif name == "CBZ":
+            op = "10110100"
+            rt = Binary(int(c[1]), 5)
+            address = Binary(int(c[2]), 19)
+
+            bin_str = op + str(address) + str(rt)
+
+        elif name == "B":
+            op = "000101"
+            
+            address = Binary(int(c[1]), 26)
+
+            bin_str = op + str(address)
+
+        return Binary(int(bin_str,2), 32)
+
+    def load_instructions(self, inst_list):
+        location = 0
+        
+        for inst in inst_list.split("\n"):
+            self.instruction_memory[location] = self.assemble(inst)
+            location += 4
+        
+
+
 cpu = ARM()
 
-#import file
-#read to instruction memory
+ex_1 = """ADDI X21, XZR, #19
+ADDI X22, XZR, #54
+ADDI X23, XZR, #80
+ADDI X24, XZR, #13
+ADD  X9,  X23, X24
+SUB  X10, X22, X21
+ADD  X11, X9,  X10"""
 
-for i in range(len(cpu.instruction_memory)):
-    cpu.cycle()
+cpu.load_instructions(ex_1)
 
+cpu.run_all()
+
+
+ex_2 = """ADD  X21, XZR, XZR	//X21 = 0 or the beginning of data memory
+LDUR X9,  [X21, #0]	//X9 = 10
+LDUR X10, [X21, #1]	//X10 = 13
+ADD  X11, X9,  X10
+STUR X11, [X21, #2]"""
+
+cpu.load_instructions(ex_2)
+
+cpu.data_memory[0] = 10
+cpu.data_memory[8] = 13
+
+print(cpu.data_memory)
+cpu.run_all()
+#
+#ex_3 = """ADDI X21, XZR, #0	//X21 = 0 (i = 0 for loop)
+#ADDI X22, XZR, #100	//X22 = 100
+#ADDI X23, XZR, #10	//X23 = 10
+#SUBI X9,  X21, #4	//compare i with 4
+#CBZ  X9, 4		//if i is 4 exit for loop
+#SUB  X22, X22, X23	
+#ADDI X21, X21, #1	//i++
+#B    -4			//loop back up to compare again"""
+#
+#cpu.load_instructions(ex_3)
+#
+#cpu.run_all()
