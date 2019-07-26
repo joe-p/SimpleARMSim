@@ -198,7 +198,7 @@ class ARM:
 
         i = self.instruction
 
-        mux0 = MUX(self.npc, self.dataA)
+        mux0 = MUX(self.pc, self.dataA)
         mux1 = MUX(self.dataB, self.imm)
         
         if i.format == "R":
@@ -229,11 +229,12 @@ class ARM:
         if i.format == "D":
             # format for data memory
             self.alu.in1 *= 8
-        elif i.format == "CB" or i.format == "B":
+        elif i.format == "B":
             # instruction memory is in multiples of 4
-            self.alu.in1 -= 4
             self.alu.in2 <<= 2
         self.alu_out = self.alu.out()
+        if i.name == "SUB" or i.name == "SUBI":
+            self.alu_out = self.alu.in1 - self.alu.in2
             
     
     def memory_access(self):
@@ -297,13 +298,19 @@ class ARM:
     def run_all(self):
         self.pc = 0
         self.register = [0] * 32
-        print("Instruction Memory: " + self.instruction_memory)
-        print("Registers (Before): " + self.register)
-        print("Data Memory (Before):" + self.data_memory)
+        print("Instruction Memory: ")
+        for i in self.instruction_memory:
+            print(i, self.instruction_memory[i])
+        print("Registers (Before): ")
+        print(self.register)
+        print("Data Memory (Before):")
+        print(self.data_memory)
         for _ in range(len(self.instruction_memory)):
             self.cycle()
-        print("Registers (Before): " + self.register)
-        print("Data Memory (After):" + self.data_memory)
+        print("Registers (Before): ")
+        print(self.register)
+        print("Data Memory (After):")
+        print(self.data_memory)
         print("***********")
 
 
