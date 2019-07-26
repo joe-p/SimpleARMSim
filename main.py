@@ -2,18 +2,41 @@
 
 class Binary:
     def __init__(self, n, bits):
-        l_bin = list('{:0{}b}'.format(n, bits))
-        
+
         if n < 0:
-            l_bin.remove("-")
+            self.neg = n
+            n = n*-1
+
+            l_bin = list('{:0{}b}'.format(n, bits))
+            
             for i in range(len(l_bin)):
                 if int(l_bin[i]):
                     l_bin[i] = "0"
                 else:
                     l_bin[i] = "1"
 
-        self.bin = "".join(l_bin)
+            twos_comp = "".join(l_bin)
+            twos_comp = Binary(int(twos_comp, 2) + 1, bits)
+
+            self.bin = twos_comp.bin
+
+        else:
+            self.bin = '{:0{}b}'.format(n, bits)
     
+    def undone_twos(self):
+
+        l_bin = list(self.bin)
+
+        for i in range(len(l_bin)):
+            if int(l_bin[i]):
+                l_bin[i] = "0"
+            else:
+                l_bin[i] = "1"
+
+        undone = "".join(l_bin)
+        undone = -1 *(int(undone, 2) + 1)
+        return undone
+
     def __str__(self):
         return self.bin
 
@@ -107,6 +130,7 @@ class ALU:
 
     def out(self):
         if self.control == 0:
+
             return self.in1 + self.in2
 
 class ARM:
@@ -138,7 +162,7 @@ class ARM:
         self.cond = 0
 
     def instruction_fetch(self):
-         
+        print("pc", self.pc) 
         self.instruction_bits = self.instruction_memory[self.pc] # Get the instruction at PC
         
         self.pc_alu.in1 = self.pc
@@ -172,7 +196,7 @@ class ARM:
         self.npc = self.pc_alu.out() 
         
         # IF pipeline here
-
+    
     def instruction_decode(self):
         
         i = self.instruction
@@ -188,9 +212,10 @@ class ARM:
             self.dataA = self.register[int(i.rt)]
             self.dataB = int(i.address)
         elif i.format == "B":
-            self.dataB = int(i.address)
+            self.dataB = int(i.address.undone_twos())
         elif i.format == "I":
             self.imm = int(i.immediate)
+            self.dataA = self.register[int(i.rn)]
 
         # ID pipeline reg here
 
@@ -230,18 +255,20 @@ class ARM:
             # format for data memory
             self.alu.in1 *= 8
         elif i.format == "B":
-            # instruction memory is in multiples of 4
-            self.alu.in2 <<= 2
+            self.alu.in1 = self.pc
+            self.alu.in2 = self.dataB * 4
         self.alu_out = self.alu.out()
         if i.name == "SUB" or i.name == "SUBI":
             self.alu_out = self.alu.in1 - self.alu.in2
             
+            print("SUB ALU", self.alu.in1, self.alu.in2, self.alu_out)
     
     def memory_access(self):
 
         i = self.instruction
 
         mux = MUX(self.npc, self.alu_out)
+        mux.select = 0
 
         if i.name == "LDUR":
             # store read data from data memory in lmd
@@ -251,23 +278,23 @@ class ARM:
             self.data_memory[self.alu_out] = self.register[int(i.rt)]
         elif i.name == "CBZ":
             if self.cond == 0:
+                print("CBZ MUX", mux.out())
                 # if 0, branch
-                mux.select = 1
+                mux.select = 0
             else:
                 # if not 0, go to next instruction
-                mux.select = 0
+                mux.select = 1
             self.pc = mux.out()
         elif i.name == "B":
-            # will always branch
             mux.select = 1
-            self.pc = mux.out()
-            
+        
+        self.pc = mux.out()
+        
 
 
     def write_back(self):
 
         i = self.instruction
-
         mux = MUX(self.lmd, self.alu_out)
 
         if i.format == "R":
@@ -291,7 +318,7 @@ class ARM:
         self.execution()
         self.memory_access()
         self.write_back()
-        self.pc = self.npc # placeholder for testing
+        #self.pc = self.npc # placeholder for testing
         print(self.register)
         print("---")
 
@@ -305,8 +332,10 @@ class ARM:
         print(self.register)
         print("Data Memory (Before):")
         print(self.data_memory)
-        for _ in range(len(self.instruction_memory)):
+        count = 0
+        while self.pc < len(self.instruction_memory)*4 and count < 51:
             self.cycle()
+            count +=1
         print("Registers (Before): ")
         print(self.register)
         print("Data Memory (After):")
@@ -380,8 +409,7 @@ class ARM:
         elif name == "B":
             op = "000101"
             
-            address = Binary(int(c[1]), 27)
-            print(len(str(address)))
+            address = Binary(int(c[1]), 26)
             bin_str = op + str(address)
 
         return Binary(int(bin_str,2), 32)
@@ -407,9 +435,9 @@ ADD  X9,  X23, X24
 SUB  X10, X22, X21
 ADD  X11, X9,  X10"""
 
-#cpu.load_instructions(ex_1)
+cpu.load_instructions(ex_1)
 
-#cpu.run_all()
+cpu.run_all()
 
 
 ex_2 = """ADD  X21, XZR, XZR	//X21 = 0 or the beginning of data memory
@@ -418,12 +446,9 @@ LDUR X10, [X21, #1]	//X10 = 13
 ADD  X11, X9,  X10
 STUR X11, [X21, #2]"""
 
-#cpu.load_instructions(ex_2)
+cpu.load_instructions(ex_2)
 
-#cpu.data_memory[168] = 10
-#cpu.data_memory[169] = 13
-
-#cpu.run_all()
+cpu.run_all()
 
 ex_3 = """ADDI X21, XZR, #0	//X21 = 0 (i = 0 for loop)
 ADDI X22, XZR, #100	//X22 = 100
@@ -435,5 +460,7 @@ ADDI X21, X21, #1	//i++
 B    -4			//loop back up to compare again"""
 
 cpu.load_instructions(ex_3)
+cpu.data_memory[168] = 10
+cpu.data_memory[169] = 13
 
 cpu.run_all()
