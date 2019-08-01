@@ -204,7 +204,7 @@ class ARM:
         
         self.npc = self.pc_alu.out() 
 
-        self.pipeline["IF_ID"]["NPC"] = self.npc
+        self.pipline["IF_ID"]["NPC"] = self.npc
         # IF pipeline here
     
     def instruction_decode(self):
@@ -233,6 +233,11 @@ class ARM:
     def execution(self):
 
         i = self.instruction
+
+        #dataA = self.pipline["ID_EX"]["DATAA"]
+        #dataB = self.pipline["ID_EX"]["DATAB"]
+        #pc = self.pipline["ID_EX"]["PC"]
+        #imm = self.pipline["ID_EX"]["IMM"]
 
         mux0 = MUX(self.pc, self.dataA)
         mux1 = MUX(self.dataB, self.imm)
@@ -272,41 +277,56 @@ class ARM:
         self.alu_out = self.alu.out()
         if i.name == "SUB" or i.name == "SUBI":
             self.alu_out = self.alu.in1 - self.alu.in2
-            
+
+        self.pipline["EX_MEM"]["COND"] = self.cond
+        self.pipline["EX_MEM"]["ALU_OUT"] = self.alu_out
+        self.pipline["EX_MEM"]["DATAB"] = self.dataB
+
+        print(self.pipline["EX_MEM"])
     
     def memory_access(self):
 
         i = self.instruction
 
-        mux = MUX(self.npc, self.alu_out)
+        cond = self.pipline["EX_MEM"]["COND"]
+        alu_out = self.pipline["EX_MEM"]["ALU_OUT"]
+        dataB = self.pipline["EX_MEM"]["DATAB"]
+
+        mux = MUX(self.npc, alu_out)
         mux.select = 0
 
         if i.name == "LDUR":
             # store read data from data memory in lmd
-            self.lmd = self.data_memory[self.alu_out]
+            self.lmd = self.data_memory[alu_out]
         elif i.name == "STUR":
             # write data into data memory
-            self.data_memory[self.alu_out] = self.register[int(i.rt)]
+            self.data_memory[alu_out] = self.register[dataB]
         elif i.name == "CBZ":
-            if self.cond == 0:
+            if cond == 0:
                 # if 0, branch
                 mux.select = 1
             else:
                 # if not 0, go to next instruction
                 mux.select = 0
-            self.pc = mux.out()
         elif i.name == "B":
             mux.select = 1
         
         self.pc = mux.out()
-        
 
+        self.pipline["MEM_WB"]["LMD"] = self.lmd
+        self.pipline["MEM_WB"]["ALU_OUT"] = self.alu_out
+
+        print(self.pipline["MEM_WB"])
+        
 
     def write_back(self):
 
         i = self.instruction
 
-        mux = MUX(self.lmd, self.alu_out)
+        lmd = self.pipline["MEM_WB"]["LMD"]
+        alu_out = self.pipline["MEM_WB"]["ALU_OUT"]
+
+        mux = MUX(lmd, alu_out)
 
         if i.format == "R":
             # write ALU output into the destination register
