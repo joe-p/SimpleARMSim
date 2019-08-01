@@ -35,7 +35,6 @@ class Binary:
 
         undone = "".join(l_bin)
         undone = -1 *(int(undone, 2) + 1)
-        print("HERE", undone)
         return undone
 
     def __str__(self):
@@ -161,7 +160,7 @@ class ARM:
         self.lmd = 0
         self.alu_out = 0
         self.cond = 0
-        self.pipline = {"IF_ID": {}, "ID_EX": {}, "EX_MEM": {}, "MEM_WB": {} }
+        self.pipeline = {"IF_ID": {}, "ID_EX": {}, "EX_MEM": {}, "MEM_WB": {} }
 
     def instruction_fetch(self):
         print("pc", self.pc) 
@@ -198,11 +197,14 @@ class ARM:
         self.npc = self.pc_alu.out() 
 
         self.pipeline["IF_ID"]["NPC"] = self.npc
+        self.pipeline["IF_ID"]["IR"] = self.instruction
         # IF pipeline here
     
     def instruction_decode(self):
-        
-        i = self.instruction
+
+        self.pipeline["ID_EX"]["NPC"] = self.pipeline["IF_ID"]["NPC"]
+
+        i = self.pipeline["IF_ID"]["IR"]
 
         if i.format == "R":
             self.dataA = self.register[int(i.rn)]
@@ -220,7 +222,10 @@ class ARM:
             self.imm = int(i.immediate)
             self.dataA = self.register[int(i.rn)]
 
-        # ID pipeline reg here
+
+        self.pipeline["ID_EX"]["DATA_A"] = self.dataA
+        self.pipeline["ID_EX"]["DATA_B"] = self.dataB
+        self.pipeline["ID_EX"]["IMM"] = self.imm
 
     def execution(self):
 
