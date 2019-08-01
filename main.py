@@ -200,7 +200,6 @@ class ARM:
 
         self.pipeline["IF_ID"]["NPC"] = self.npc
         self.pipeline["IF_ID"]["IR"] = self.instruction
-        # IF pipeline here
     
     def instruction_decode(self):
 
@@ -233,7 +232,12 @@ class ARM:
 
         i = self.instruction
 
-        mux0 = MUX(self.npc, self.dataA)
+        dataA = self.pipeline["ID_EX"]["DATA_A"]
+        dataB = self.pipeline["ID_EX"]["DATA_B"]
+        pc = self.pipeline["ID_EX"]["NPC"]
+        imm = self.pipeline["ID_EX"]["IMM"]
+
+        mux0 = MUX(self.pc, self.dataA)
         mux1 = MUX(self.dataB, self.imm)
         
         if i.format == "R":
@@ -264,38 +268,56 @@ class ARM:
         self.alu_out = self.alu.out()
         if i.name == "SUB" or i.name == "SUBI":
             self.alu_out = self.alu.in1 - self.alu.in2
-            
+
+        self.pipeline["EX_MEM"]["COND"] = self.cond
+        self.pipeline["EX_MEM"]["ALU_OUT"] = self.alu_out
+        self.pipeline["EX_MEM"]["DATAB"] = self.dataB
+
+        print(self.pipeline["EX_MEM"])
     
     def memory_access(self):
 
         i = self.instruction
 
-        mux = MUX(self.npc, self.alu_out)
+        cond = self.pipeline["EX_MEM"]["COND"]
+        alu_out = self.pipeline["EX_MEM"]["ALU_OUT"]
+        dataB = self.pipeline["EX_MEM"]["DATAB"]
+
+        mux = MUX(self.npc, alu_out)
         mux.select = 0
 
         if i.name == "LDUR":
-            self.lmd = self.data_memory[self.alu_out]
+             # store read data from data memory in lmd
+            self.lmd = self.data_memory[alu_out]
         elif i.name == "STUR":
-            self.data_memory[self.alu_out] = self.register[int(i.rt)]
+            # write data into data memory
+            self.data_memory[alu_out] = self.register[dataB]
         elif i.name == "CBZ":
-            if self.cond == 0:
+            if cond == 0:
+                # if 0, branch
                 mux.select = 1
             else:
                 mux.select = 0
-            self.pc = mux.out()
         elif i.name == "B":
             print("ALU", self.alu.in1, self.alu.in2, self.alu.out())
             mux.select = 1
         
         self.pc = mux.out()
-        
 
+        self.pipeline["MEM_WB"]["LMD"] = self.lmd
+        self.pipeline["MEM_WB"]["ALU_OUT"] = self.alu_out
+
+        print(self.pipeline["MEM_WB"])
+        
 
     def write_back(self):
 
         i = self.instruction
 
-        mux = MUX(self.lmd, self.alu_out)
+        lmd = self.pipeline["MEM_WB"]["LMD"]
+        alu_out = self.pipeline["MEM_WB"]["ALU_OUT"]
+
+        mux = MUX(lmd, alu_out)
 
         if i.format == "R":
             mux.select = 1
