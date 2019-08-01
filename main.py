@@ -168,6 +168,7 @@ class ARM:
         self.lmd = 0
         self.alu_out = 0
         self.cond = 0
+        self.pipline = {"IF_ID": {}, "ID_EX": {}, "EX_MEM": {}, "MEM_WB": {} }
 
     def instruction_fetch(self):
         self.instruction_bits = self.instruction_memory[self.pc] # Get the instruction at PC
@@ -202,7 +203,8 @@ class ARM:
             raise ValueError("Unrecognized opcode: {} 0b{}".format(i, ib))
         
         self.npc = self.pc_alu.out() 
-        
+
+        self.pipeline["IF_ID"]["NPC"] = self.npc
         # IF pipeline here
     
     def instruction_decode(self):
