@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import threading
+import time
 
 class Binary:
     def __init__(self, n, bits):
@@ -163,7 +165,7 @@ class ARM:
         self.pipeline = {"IF_ID": {}, "ID_EX": {}, "EX_MEM": {}, "MEM_WB": {} }
 
     def instruction_fetch(self):
-        print("pc", self.pc) 
+        print("pc", self.pc, flush=True) 
         self.instruction_bits = self.instruction_memory[self.pc] # Get the instruction at PC
         
         self.pc_alu.in1 = self.pc
@@ -404,49 +406,99 @@ class ARM:
         for inst in inst_list.split("\n"):
             self.instruction_memory[location] = self.assemble(inst)
             location += 4
+
+
+
+    def pipeline_cycles(self):
+        self.instruction_fetch()
+        print(self.pipeline["IF_ID"]["IR"].name, flush=True)
+        time.sleep(.5)
         
+        self.instruction_decode()
+        time.sleep(.5)
+        
+        self.execution()
+        time.sleep(.5)
+        
+        self.memory_access()
+        time.sleep(.5)
+        
+        self.write_back()
+        time.sleep(.5)
 
+    def run_pipelined(self):
+        self.pc = 0
+        self.register = [0] * 32
+        
+        running = []
+        count = 0
+        while (count < len(self.instruction_memory)):
+            time.sleep(.5)
+            t = threading.Thread(target=self.pipeline_cycles)
+            t.start()
+            running.append(t)
 
+            count += 1
+            print(count, flush=True)
+            
 cpu = ARM()
 
-ex_1 = """ADDI X21, XZR, #19
-ADDI X22, XZR, #54
-ADDI X23, XZR, #80
-ADDI X24, XZR, #13
+
+test = """ADDI X21, XZR, #19
+ADD  X9,  X23, X24
+SUB  X10, X22, X21
+ADD  X11, X9,  X10
+ADDI X21, XZR, #19
+ADD  X9,  X23, X24
+SUB  X10, X22, X21
+ADD  X11, X9,  X10
+ADDI X21, XZR, #19
 ADD  X9,  X23, X24
 SUB  X10, X22, X21
 ADD  X11, X9,  X10"""
 
-cpu.load_instructions(ex_1)
+cpu.load_instructions(test)
 
-cpu.run_all()
+cpu.run_pipelined()
 
-
-ex_2 = """ADD  X21, XZR, XZR	//X21 = 0 or the beginning of data memory
-LDUR X9,  [X21, #0]	//X9 = 10
-LDUR X10, [X21, #1]	//X10 = 13
-ADD  X11, X9,  X10
-STUR X11, [X21, #2]"""
-
-cpu.load_instructions(ex_2)
-
-cpu.data_memory[168] = 10
-cpu.data_memory[169] = 13
-
-cpu.run_all()
-
-
-ex_3 = """ADDI X21, XZR, #0	//X21 = 0 (i = 0 for loop)
-ADDI X22, XZR, #100	//X22 = 100
-ADDI X23, XZR, #10	//X23 = 10
-SUBI X9,  X21, #4	//compare i with 4
-CBZ  X9, 4		//if i is 4 exit for loop
-SUB  X22, X22, X23	
-ADDI X21, X21, #1	//i++
-B    -4			//loop back up to compare again"""
-
-cpu.load_instructions(ex_3)
-cpu.data_memory[168] = 10
-cpu.data_memory[169] = 13
-
-cpu.run_all()
+#ex_1 = """ADDI X21, XZR, #19
+#ADDI X22, XZR, #54
+#ADDI X23, XZR, #80
+#ADDI X24, XZR, #13
+#ADD  X9,  X23, X24
+#SUB  X10, X22, X21
+#ADD  X11, X9,  X10"""
+#
+#cpu.load_instructions(ex_1)
+#
+#cpu.run_pipelined()
+#
+##
+#ex_2 = """ADD  X21, XZR, XZR	//X21 = 0 or the beginning of data memory
+#LDUR X9,  [X21, #0]	//X9 = 10
+#LDUR X10, [X21, #1]	//X10 = 13
+#ADD  X11, X9,  X10
+#STUR X11, [X21, #2]"""
+#
+#cpu.load_instructions(ex_2)
+#
+#cpu.data_memory[168] = 10
+#cpu.data_memory[169] = 13
+#
+#cpu.run_all()
+#
+#
+#ex_3 = """ADDI X21, XZR, #0	//X21 = 0 (i = 0 for loop)
+#ADDI X22, XZR, #100	//X22 = 100
+#ADDI X23, XZR, #10	//X23 = 10
+#SUBI X9,  X21, #4	//compare i with 4
+#CBZ  X9, 4		//if i is 4 exit for loop
+#SUB  X22, X22, X23	
+#ADDI X21, X21, #1	//i++
+#B    -4			//loop back up to compare again"""
+#
+#cpu.load_instructions(ex_3)
+#cpu.data_memory[168] = 10
+#cpu.data_memory[169] = 13
+#
+#cpu.run_all()
