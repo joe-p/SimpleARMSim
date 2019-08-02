@@ -159,7 +159,12 @@ class ARM:
     register = [0] * 32
 
     def __init__(self):
-        self.pc_alu.in2 = 4 # Input to the PC ALU is always 4 
+        self.pc_alu.in2 = 4 # Input to the PC ALU is always 4
+
+        self.clock_enable = True
+
+        self.clock_thread = threading.Thread(target=self.run_clock)
+        self.clock_thread.start()
 
         # Initial values are zero
         self.dataA = 0
@@ -170,8 +175,18 @@ class ARM:
         self.alu_out = 0
         self.cond = 0
         self.pipeline = {"IF_ID": {}, "ID_EX": {}, "EX_MEM": {}, "MEM_WB": {} }
-        self.stall_for_branch = threading.Thread(target=None)
-    
+        self.stall_for_branch = False
+
+    def run_clock(self):
+        self.clock = 0
+        while(self.clock_enable):
+            time.sleep(1)
+
+            if self.clock:
+                self.clock = 0
+            else:
+                self.clock = 1
+
     def instruction_fetch(self):
         try:
             self.instruction_bits = self.instruction_memory[self.pc] # Get the instruction at PC
@@ -468,32 +483,41 @@ class ARM:
 
 
     def pipeline_cycles(self):
-        print(threading.active_count())
-        new_fetch = threading.Thread(target=self.instruction_fetch)
-        
+        local_branch_stall = False
+
         # Stall for a cycle if...
         #   i. A previous fetch is still ocurring
         #   ii. A branch instruciton is executing and we need to wait for it to finish
 
-        #while self.branching:
-        #    print("==============STALL===========", flush=True)
-        #    self.clock_cycles += 1
+        while(self.clock or self.stall_for_branch):
+            pass
 
         self.instruction_fetch()
 
         f = self.pipeline["IF_ID"]["IR"].format
-
-
+        
         if  f == "B" or f == "CB":
-            self.stall_for_branch = threading.current_thread()
-
+            self.stall_for_branch = True
+            local_branch_stall = True
+            
+        while(self.clock):
+            pass
         self.instruction_decode()
 
+        while(self.clock):
+            pass
         self.execution()
 
+        while(self.clock):
+            pass
         self.memory_access()
 
+        while(self.clock):
+            pass
         self.write_back()
+
+        if local_branch_stall:
+            self.stall_for_branch = False
 
 cpu = ARM()
 
@@ -537,3 +561,6 @@ cpu.load_instructions(ex_3)
 
 print("Example 3")
 cpu.run_pipelined()
+
+
+cpu.clock_enable = False
