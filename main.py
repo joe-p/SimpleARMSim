@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-
+import threading
+import time
 # Binary is a class used to to easily manipulate binary numbers
 class Binary:
     def __init__(self, n, bits):
@@ -168,8 +169,8 @@ class ARM:
         self.lmd = 0
         self.alu_out = 0
         self.cond = 0
-        self.pipline = {"IF_ID": {}, "ID_EX": {}, "EX_MEM": {}, "MEM_WB": {} }
-
+        self.pipeline = {"IF_ID": {}, "ID_EX": {}, "EX_MEM": {}, "MEM_WB": {} }
+        self.fetches = [threading.Thread(target=None)]
     def instruction_fetch(self):
         self.instruction_bits = self.instruction_memory[self.pc] # Get the instruction at PC
         
@@ -204,12 +205,13 @@ class ARM:
         
         self.npc = self.pc_alu.out() 
 
-        self.pipline["IF_ID"]["NPC"] = self.npc
+        self.pipeline["IF_ID"]["PC"] = self.pc
+        self.pipeline["IF_ID"]["IR"] = self.instruction
         # IF pipeline here
     
     def instruction_decode(self):
         
-        i = self.instruction
+        i = self.pipeline["IF_ID"]["IR"]
 
         # Set up the dataA and dataB (the read data output of the register file) based on the values within the instruction object
         if i.format == "R":
@@ -228,16 +230,19 @@ class ARM:
             self.imm = int(i.immediate)
             self.dataA = self.register[int(i.rn)]
 
-        # ID pipeline reg here
+        self.pipeline["ID_EX"]["DATAA"] = self.dataA
+        self.pipeline["ID_EX"]["DATAB"] = self.dataB
+        self.pipeline["ID_EX"]["PC"] = self.pipeline["IF_ID"]["PC"]
+        self.pipeline["ID_EX"]["IMM"] = self.imm
 
     def execution(self):
 
         i = self.instruction
 
-        #dataA = self.pipline["ID_EX"]["DATAA"]
-        #dataB = self.pipline["ID_EX"]["DATAB"]
-        #pc = self.pipline["ID_EX"]["PC"]
-        #imm = self.pipline["ID_EX"]["IMM"]
+        dataA = self.pipeline["ID_EX"]["DATAA"]
+        dataB = self.pipeline["ID_EX"]["DATAB"]
+        pc = self.pipeline["ID_EX"]["PC"]
+        imm = self.pipeline["ID_EX"]["IMM"]
 
         mux0 = MUX(self.pc, self.dataA)
         mux1 = MUX(self.dataB, self.imm)
@@ -278,19 +283,19 @@ class ARM:
         if i.name == "SUB" or i.name == "SUBI":
             self.alu_out = self.alu.in1 - self.alu.in2
 
-        self.pipline["EX_MEM"]["COND"] = self.cond
-        self.pipline["EX_MEM"]["ALU_OUT"] = self.alu_out
-        self.pipline["EX_MEM"]["DATAB"] = self.dataB
+        self.pipeline["EX_MEM"]["COND"] = self.cond
+        self.pipeline["EX_MEM"]["ALU_OUT"] = self.alu_out
+        self.pipeline["EX_MEM"]["DATAB"] = self.dataB
 
-        print(self.pipline["EX_MEM"])
+        print(self.pipeline["EX_MEM"])
     
     def memory_access(self):
 
         i = self.instruction
 
-        cond = self.pipline["EX_MEM"]["COND"]
-        alu_out = self.pipline["EX_MEM"]["ALU_OUT"]
-        dataB = self.pipline["EX_MEM"]["DATAB"]
+        cond = self.pipeline["EX_MEM"]["COND"]
+        alu_out = self.pipeline["EX_MEM"]["ALU_OUT"]
+        dataB = self.pipeline["EX_MEM"]["DATAB"]
 
         mux = MUX(self.npc, alu_out)
         mux.select = 0
@@ -313,18 +318,18 @@ class ARM:
         
         self.pc = mux.out()
 
-        self.pipline["MEM_WB"]["LMD"] = self.lmd
-        self.pipline["MEM_WB"]["ALU_OUT"] = self.alu_out
+        self.pipeline["MEM_WB"]["LMD"] = self.lmd
+        self.pipeline["MEM_WB"]["ALU_OUT"] = self.alu_out
 
-        print(self.pipline["MEM_WB"])
+        print(self.pipeline["MEM_WB"])
         
 
     def write_back(self):
 
         i = self.instruction
 
-        lmd = self.pipline["MEM_WB"]["LMD"]
-        alu_out = self.pipline["MEM_WB"]["ALU_OUT"]
+        lmd = self.pipeline["MEM_WB"]["LMD"]
+        alu_out = self.pipeline["MEM_WB"]["ALU_OUT"]
 
         mux = MUX(lmd, alu_out)
 
@@ -361,6 +366,7 @@ class ARM:
         print("Registers (Before): ", self.register)
         print("Data Memory (Before):", self.data_memory)
         while self.pc < len(self.instruction_memory)*4:
+            print("PC", self.pc)
             self.cycle()
         print("Registers (After): ", self.register)
         print("Data Memory (After):", self.data_memory)
